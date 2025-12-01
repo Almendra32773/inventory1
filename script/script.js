@@ -144,10 +144,10 @@ document.getElementById('searchInput').addEventListener('input', function(e) {
     });
 
     // Desactivar escáner cuando se usa la barra de búsqueda manual
-    document.getElementById('searchInput').addEventListener('focus', function() {
+    /*document.getElementById('searchInput').addEventListener('focus', function() {
         scannerActive = false;
         document.getElementById('scannerStatus').textContent = '';
-    });
+    });*/
 
 
 });
