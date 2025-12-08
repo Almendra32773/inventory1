@@ -759,11 +759,7 @@ function printInventory() {
         
         printContent += `
             <div class="product-page">
-                <div class="header">
-                    <p class="store-name">${settings.storeName}</p>
-                    <p style="margin: 5px 0;">Inventario</p>
-                </div>
-                
+                <hr>
                 <div class="product-name">${product.name}</div>
                 
                 <div class="product-info">
@@ -790,6 +786,7 @@ function printInventory() {
                     ` : ''}
                     
                 </div>
+                <hr>
             </div>
         `;
     });
