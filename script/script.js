@@ -700,7 +700,7 @@ document.getElementById('addProductForm').addEventListener('submit', async funct
     const stockQuantity = parseInt(document.getElementById('stockQuantity').value) || 0;
     const stockPerContainer = parseInt(document.getElementById('stockPerContainer').value) || 1;
     const imageFile = document.getElementById('productImageFile').files[0];
-    const imageUrl = document.getElementById('productImageUrl').value.trim();
+    const imageUrlInput = document.getElementById('productImageUrl').value.trim();
     
     if (!name) {
         alert('Añada un nombre');
@@ -1147,7 +1147,7 @@ function checkAutoDelete() {
 // ==================== UTILIDADES ====================
 
 // Subir imagen a Cloudinary y devolver la URL
-async function subirImagenACloudinary(file) {
+async function uploadImageToCloudinary(file) {
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
     const formData = new FormData();
     formData.append("file", file);
