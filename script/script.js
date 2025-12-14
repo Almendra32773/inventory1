@@ -946,7 +946,8 @@ function checkLowStock() {
         if (product.initialStock > 0) {
             const stockPercentage = (product.totalUnits / product.initialStock) * 100;
             if (stockPercentage <= settings.stockWarning && stockPercentage > 0) {
-                alert(`⚠️ Queda poco Stock de ${product.name}`);
+                //alerta de stock bajo
+                //alert(`⚠️ Queda poco Stock de ${product.name}`);
             }
         }
     });
