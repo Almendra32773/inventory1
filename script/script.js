@@ -1201,7 +1201,7 @@ function printProductSingle(productId) {
                 
                 <div class="product-info">
                     <div class="info-row">
-                        <span class="info-label">Código de Barras:</span>
+                        <span class="info-label">Código:</span>
                         <span class="info-value">${product.barcode || 'N/A'}</span>
                     </div>
                     
@@ -1216,10 +1216,10 @@ function printProductSingle(productId) {
                     </div>
                     
                     ${convertedPrice ? `
-                    <div class="info-row">
-                        <span class="info-label">Precio Bs:</span>
-                        <span class="info-value">${convertedPrice}</span>
-                    </div>
+                    
+                        <p class="product-name"><br>Precio Bs:</br></p>
+                        <p class="product-name">${convertedPrice}</p>
+                    
                     ` : ''}
                     
                 </div>
