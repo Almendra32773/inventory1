@@ -19,112 +19,6 @@ let editingProductId = null;
 // ✅✅✅ AGREGAR ESTO EN SU LUGAR ✅✅✅
 console.log('🔧 Script.js cargado - Sistema universal iniciado');
 
-//inventory protector
-/*class InventoryProtector {
-    constructor() {
-        this.spaceCheckInterval = null;
-        this.lastWarning = null;
-    }
-    
-    startMonitoring() {
-        // Verificar espacio cada 5 minutos
-        this.spaceCheckInterval = setInterval(() => {
-            this.checkStorageHealth();
-        }, 5 * 60 * 1000);
-        
-        // Verificar al inicio
-        setTimeout(() => this.checkStorageHealth(), 3000);
-    }
-    
-    checkStorageHealth() {
-        const espacioTotal = this.getTotalSpaceUsed();
-        const espacioMB = espacioTotal / (1024 * 1024);
-        
-        console.log(`📊 Salud almacenamiento: ${espacioMB.toFixed(2)}MB usados`);
-        
-        // Niveles de alerta
-        if (espacioMB > 4) { // Más de 4MB
-            this.showWarning('alto', espacioMB);
-        } else if (espacioMB > 3) { // Más de 3MB
-            this.showWarning('medio', espacioMB);
-        } else if (espacioMB > 2) { // Más de 2MB
-            this.showWarning('bajo', espacioMB);
-        }
-    }
-    
-    showWarning(nivel, espacioMB) {
-        // No mostrar advertencias muy seguido
-        const ahora = Date.now();
-        if (this.lastWarning && (ahora - this.lastWarning < 5 * 60 * 1000)) {
-            return; // Esperar al menos 5 minutos entre advertencias
-        }
-        
-        this.lastWarning = ahora;
-        
-        const mensajes = {
-            bajo: `📊 El almacenamiento está al ${Math.round((espacioMB/5)*100)}%.\nConsidera exportar un backup pronto.`,
-            medio: `⚠️ El almacenamiento está al ${Math.round((espacioMB/5)*100)}%.\nExporta un backup para prevenir problemas.`,
-            alto: `🚨 El almacenamiento está al ${Math.round((espacioMB/5)*100)}%.\nExporta un backup AHORA para proteger tu inventario.`
-        };
-        
-        // Mostrar notificación no intrusiva
-        if (window.backupManager) {
-            window.backupManager.mostrarNotificacion(mensajes[nivel], nivel === 'alto' ? 'error' : 'warning');
-        } else {
-            console.warn(mensajes[nivel]);
-        }
-        
-        // Si es nivel alto, mostrar alerta más prominente
-        if (nivel === 'alto') {
-            setTimeout(() => {
-                if (confirm(mensajes.alto + '\n\n¿Quieres exportar un backup ahora?')) {
-                    if (window.exportarBackupManual) {
-                        window.exportarBackupManual();
-                    }
-                }
-            }, 1000);
-        }
-    }
-    
-    getTotalSpaceUsed() {
-        let total = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const value = localStorage.getItem(key);
-            total += key.length + value.length;
-        }
-        return total;
-    }
-    
-    getSpaceBreakdown() {
-        const breakdown = {
-            inventory: 0,
-            sales: 0,
-            settings: 0,
-            backups: 0,
-            other: 0
-        };
-        
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            const value = localStorage.getItem(key);
-            const size = key.length + value.length;
-            
-            if (key === 'inventory') breakdown.inventory = size;
-            else if (key === 'sales') breakdown.sales = size;
-            else if (key === 'settings') breakdown.settings = size;
-            else if (key.includes('backup')) breakdown.backups += size;
-            else breakdown.other += size;
-        }
-        
-        return breakdown;
-    }
-}*/
-
-// Inicializar protector
-//const inventoryProtector = new InventoryProtector();
-
-// ==================== SISTEMA DE BACKUP ====================
 // ==================== SISTEMA DE BACKUP ====================
 class BackupManager {
     constructor() {
@@ -1221,7 +1115,7 @@ function showSaleReceipt(sale) {
     }
     
     receipt += `
-            <p style="margin-top: 10px;">Forma de pago: ${sale.paymentMethod}</p>
+            
         </div>
     `;
     
@@ -1414,7 +1308,7 @@ function printProductSingle(productId) {
                     
                     ${convertedPrice ? `
                     
-                        <p class="product-name"><br>Precio Bs:</br></p>
+                        <p class="info-label"><br>Precio Bs:</br></p>
                         <p class="product-name">${convertedPrice}</p>
                     
                     ` : ''}
@@ -1833,7 +1727,7 @@ function printInventory() {
                     
                     ${convertedPrice ? `
                     
-                        <p class="pruduct-name">Precio Bs:</p>
+                        <p class="info-label">Precio Bs:</p>
                         <p class="product-name">${convertedPrice}</p>
                     
                     ` : ''}
