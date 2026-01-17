@@ -238,7 +238,163 @@
         </div>
     </div>
     <!-- script de la app -->
-    <script src="script/script.js"></script>
-</body>
 
+    <!-- =========================================== -->
+    <!-- SISTEMA UNIVERSAL - FUNCIONA EN CUALQUIER PC -->
+    <!-- =========================================== -->
+    
+        <!-- 1. CDN de Supabase - AÑADE ASYNC -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js" async></script>
+
+    <!-- 2. Configuración Supabase - MODIFICADA -->
+    <script>
+        // VARIABLES GLOBALES PARA SUPABASE
+        window.SUPABASE_CONFIG = {
+            // ⚠️ VERIFICA ESTA URL - TIENE UN ERROR DE TIPEO
+            url: 'https://tlzlpwxjzuhamsjmynee.supabase.co',  // La correcta es con Z
+            key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRsemxwd3hqenVoYW1zam15bmVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1NzI5MTMsImV4cCI6MjA4NDE0ODkxM30.Hr0ckNblzXfjYCE-r7YKxjQYAQi7rRdCafCOA0MwdMM'
+        };
+        
+        // Variables globales
+        window.supabaseClient = null;  // Cambié el nombre para evitar confusión
+        window.usarSupabase = false;
+        
+        // Función para INICIALIZAR Supabase - REESCRITA
+        function inicializarSupabase() {
+            try {
+                console.log('🔄 Inicializando Supabase...');
+                
+                // Verificar que el CDN se cargó
+                if (typeof supabase === 'undefined') {
+                    console.warn('❌ CDN de Supabase no cargado');
+                    window.usarSupabase = false;
+                    return false;
+                }
+                
+                // Verificar credenciales
+                if (!window.SUPABASE_CONFIG.url || !window.SUPABASE_CONFIG.key) {
+                    console.warn('❌ Credenciales de Supabase no configuradas');
+                    window.usarSupabase = false;
+                    return false;
+                }
+                
+                // VERIFICAR URL - CORREGIR EL TIPEO
+                const urlCorrecta = 'https://tlzlpwxjzuhamsjmynee.supabase.co';
+                if (window.SUPABASE_CONFIG.url !== urlCorrecta) {
+                    console.warn('⚠️ URL incorrecta, corrigiendo...');
+                    window.SUPABASE_CONFIG.url = urlCorrecta;
+                }
+                
+                console.log('📡 URL:', window.SUPABASE_CONFIG.url);
+                console.log('🔑 Key length:', window.SUPABASE_CONFIG.key.length);
+                
+                // IMPORTANTE: supabase (del CDN) ya tiene createClient
+                // No necesitas desestructurar de window.supabase
+                window.supabaseClient = supabase.createClient(
+                    window.SUPABASE_CONFIG.url,
+                    window.SUPABASE_CONFIG.key
+                );
+                
+                console.log('✅ Supabase inicializado correctamente');
+                console.log('🔧 Cliente creado:', typeof window.supabaseClient);
+                window.usarSupabase = true;
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error inicializando Supabase:', error);
+                console.error('Detalles:', error.message);
+                window.usarSupabase = false;
+                return false;
+            }
+        }
+        
+        // Función para PROBAR conexión
+        async function probarConexionSupabase() {
+            if (!window.supabaseClient) {
+                console.log('📴 Cliente Supabase no disponible');
+                return false;
+            }
+            
+            try {
+                console.log('🔍 Probando conexión con Supabase...');
+                const { data, error } = await window.supabaseClient
+                    .from('productos')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ Error de conexión:', error.message);
+                    console.error('Código:', error.code);
+                    return false;
+                }
+                
+                console.log('✅ Conexión con Supabase exitosa');
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error en prueba de conexión:', error);
+                return false;
+            }
+        }
+        
+        // Inicializar cuando la página cargue - MODIFICADO
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Aplicación cargando...');
+            
+            // Esperar a que el CDN se cargue
+            setTimeout(() => {
+                const supabaseInicializado = inicializarSupabase();
+                
+                if (supabaseInicializado) {
+                    // Probar conexión
+                    setTimeout(async () => {
+                        const conexionExitosa = await probarConexionSupabase();
+                        window.usarSupabase = conexionExitosa;
+                        
+                        if (conexionExitosa) {
+                            console.log('🌐 Modo: Supabase + localStorage (sincronizado)');
+                        } else {
+                            console.log('📴 Modo: Solo localStorage (sin conexión)');
+                        }
+                    }, 500);
+                } else {
+                    console.log('📴 Modo: Solo localStorage (Supabase no configurado)');
+                }
+            }, 1000); // Dar tiempo al CDN para cargar
+        });
+        
+        // Función de diagnóstico global
+        window.diagnosticoSupabase = function() {
+            console.log('=== DIAGNÓSTICO SUPABASE ===');
+            console.log('1. supabase (CDN) existe?', typeof supabase !== 'undefined');
+            console.log('2. supabase.createClient existe?', typeof supabase?.createClient !== 'undefined');
+            console.log('3. window.supabaseClient existe?', typeof window.supabaseClient !== 'undefined');
+            console.log('4. window.usarSupabase:', window.usarSupabase);
+            console.log('5. Config URL:', window.SUPABASE_CONFIG.url);
+            console.log('6. Config KEY:', window.SUPABASE_CONFIG.key ? '✓ ' + window.SUPABASE_CONFIG.key.length + ' chars' : '✗');
+            console.log('============================');
+        };
+    </script>
+    
+   <!-- 3. Tu script principal (ACTUALIZADO para usar el cliente correcto) -->
+    <script src="scripts/script.js"></script>
+    
+   <!-- 4. Parche para asegurar compatibilidad -->
+    <script>
+        // Asegurar que las funciones de script.js usen el cliente correcto
+        setTimeout(() => {
+            if (window.supabaseClient) {
+                // Hacer que window.supabase apunte al cliente
+                window.supabase = window.supabaseClient;
+                console.log('🔧 Compatibilidad establecida: window.supabase = window.supabaseClient');
+            }
+            
+            // Ejecutar diagnóstico
+            setTimeout(() => {
+                window.diagnosticoSupabase();
+            }, 1500);
+        }, 1000);
+    </script>
+</body>
 </html>

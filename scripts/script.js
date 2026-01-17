@@ -16,7 +16,11 @@ let scannerActive = false;
 let editMode = false;
 let editingProductId = null;
 
-class InventoryProtector {
+// ✅✅✅ AGREGAR ESTO EN SU LUGAR ✅✅✅
+console.log('🔧 Script.js cargado - Sistema universal iniciado');
+
+//inventory protector
+/*class InventoryProtector {
     constructor() {
         this.spaceCheckInterval = null;
         this.lastWarning = null;
@@ -115,10 +119,10 @@ class InventoryProtector {
         
         return breakdown;
     }
-}
+}*/
 
 // Inicializar protector
-const inventoryProtector = new InventoryProtector();
+//const inventoryProtector = new InventoryProtector();
 
 // ==================== SISTEMA DE BACKUP ====================
 // ==================== SISTEMA DE BACKUP ====================
@@ -412,9 +416,102 @@ window.addEventListener('beforeunload', function() {
     logout();
 });
 
-// Cargar datos del localStorage CON RECUPERACIÓN
-function loadData() {
-    console.log('🔍 Cargando datos...');
+// Cargar datos del localStorage CON RECUPERACIÓN Y SUPABASE
+async function loadData() {
+    console.log('🔍 Cargando datos (Sistema Dual)...');
+    
+    // Opción 1: Intentar cargar desde Supabase primero
+    if (window.usarSupabase && window.supabaseClient) {
+        console.log('🔄 Intentando cargar desde Supabase...');
+        const exito = await cargarDesdeSupabase();
+        
+        if (exito) {
+            console.log(`✅ Datos cargados desde Supabase: ${inventory.length} productos`);
+            return; // ¡Éxito! Salir de la función
+        }
+    }
+    
+    // Opción 2: Si Supabase falla, usar localStorage normal
+    console.log('📴 Cargando desde localStorage...');
+    cargarDesdeLocalStorage();
+}
+
+// Función para cargar desde Supabase
+async function cargarDesdeSupabase() {
+    try {
+        console.log('🌐 Conectando a Supabase...');
+        
+        // 1. CARGAR PRODUCTOS desde Supabase
+        const { data: productos, error: errorProductos } = await window.supabaseClient
+            .from('productos')
+            .select('*')
+            .order('name', { ascending: true });
+        
+        if (errorProductos) {
+            console.error('❌ Error cargando productos:', errorProductos);
+            return false;
+        }
+        
+        // Convertir formato Supabase → Formato de tu app
+        if (productos && productos.length > 0) {
+            inventory = productos.map(p => ({
+                id: p.id,
+                name: p.name,
+                size: p.size || '',
+                price: parseFloat(p.price),
+                stockType: p.stocktype || 'units',           // snake_case → camelCase
+                unitsPerContainer: p.unitspercontainer || 1, // snake_case → camelCase
+                totalUnits: p.totalunits || 0,              // snake_case → camelCase
+                initialStock: p.initialstock || 0,          // snake_case → camelCase
+                barcode: p.barcode || '',
+                image: p.image || '/logodepestaña/Captura de pantalla 2025-11-19 143222.ico'
+            }));
+            
+            console.log(`📦 ${inventory.length} productos cargados desde Supabase`);
+            
+            // Guardar en localStorage como backup
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+        } else {
+            console.log('📭 Supabase vacío, buscando en localStorage...');
+            return false; // Supabase está vacío
+        }
+        
+        // 2. CARGAR VENTAS desde Supabase (opcional)
+        try {
+            const { data: ventas, error: errorVentas } = await window.supabaseClient
+                .from('ventas')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(500); // Limitar para no sobrecargar
+            
+            if (!errorVentas && ventas) {
+                sales = ventas.map(v => ({
+                    id: v.id,
+                    date: v.date || v.created_at,
+                    paymentMethod: v.paymentmethod || 'Efectivo', // aqui la m a M si hay error
+                    items: v.items,
+                    total: parseFloat(v.total)
+                }));
+                
+                console.log(`💰 ${sales.length} ventas cargadas desde Supabase`);
+                localStorage.setItem('sales', JSON.stringify(sales));
+            }
+        } catch (errorVentas) {
+            console.log('⚠️ No se pudieron cargar ventas:', errorVentas);
+            // No es crítico, continuar
+        }
+        
+        return true; // ¡Éxito!
+        
+    } catch (error) {
+        console.error('💥 Error grave cargando desde Supabase:', error);
+        return false; // Falló
+    }
+}
+
+// Función para cargar desde localStorage (tu código original adaptado)
+function cargarDesdeLocalStorage() {
+    console.log('💾 Usando almacenamiento local...');
     
     let cargadoCorrectamente = true;
     
@@ -423,9 +520,9 @@ function loadData() {
         const savedInventory = localStorage.getItem('inventory');
         if (savedInventory) {
             inventory = JSON.parse(savedInventory);
-            console.log(`✅ Inventario cargado: ${inventory.length} productos`);
+            console.log(`✅ Inventario local: ${inventory.length} productos`);
         } else {
-            console.warn('⚠️ No se encontró inventario');
+            console.warn('⚠️ No se encontró inventario en localStorage');
             cargadoCorrectamente = false;
         }
     } catch (error) {
@@ -439,7 +536,7 @@ function loadData() {
         const savedSales = localStorage.getItem('sales');
         if (savedSales) {
             sales = JSON.parse(savedSales);
-            console.log(`✅ Ventas cargadas: ${sales.length} registros`);
+            console.log(`✅ Ventas locales: ${sales.length} registros`);
         }
     } catch (error) {
         console.error('❌ Error cargando ventas:', error);
@@ -458,109 +555,166 @@ function loadData() {
         // Mantener configuración por defecto
     }
     
-    // Si no se cargó correctamente, intentar recuperar
+    // Si no se cargó correctamente, intentar recuperar desde backup
     if (!cargadoCorrectamente) {
         console.log('🔄 Intentando recuperar desde backup...');
-        const datosRecuperados = backupManager.recuperarBackup();
-        if (datosRecuperados && datosRecuperados.length > 0) {
-            inventory = datosRecuperados;
-            console.log(`🔄 Inventario recuperado: ${inventory.length} productos`);
+        if (window.backupManager) {
+            const datosRecuperados = window.backupManager.recuperarBackup();
+            if (datosRecuperados && datosRecuperados.length > 0) {
+                inventory = datosRecuperados;
+                console.log(`🔄 Inventario recuperado: ${inventory.length} productos`);
+            }
         }
     }
     
     // Verificar espacio después de cargar
-    setTimeout(() => backupManager.verificarEspacioDisponible(), 1000);
+    setTimeout(() => {
+        if (window.backupManager) {
+            window.backupManager.verificarEspacioDisponible();
+        }
+    }, 1000);
 }
 
 // Guardar datos en localStorage CON PROTECCIÓN DEL INVENTARIO
 
-function saveData() {
-    console.log('💾 Intentando guardar datos...');
+// Guardar datos en localStorage Y Supabase
+async function saveData() {
+    console.log('💾 Guardando datos (Sistema Dual)...');
     
+    let guardadoLocal = false;
+    let guardadoSupabase = false;
+    
+    // 1. PRIMERO: Guardar en localStorage (siempre)
     try {
-        // 1. PRIMERO intentar guardar normal
         localStorage.setItem('inventory', JSON.stringify(inventory));
         localStorage.setItem('sales', JSON.stringify(sales));
         localStorage.setItem('settings', JSON.stringify(settings));
         
-        // 2. Crear backup automático
-        if (window.backupManager) {
-            setTimeout(() => backupManager.crearBackupAutomatico(), 100);
-        }
+        console.log('✅ Datos guardados en localStorage');
+        guardadoLocal = true;
         
-        console.log('✅ Datos guardados normalmente');
-        return true;
+        // Crear backup automático
+        if (window.backupManager) {
+            setTimeout(() => window.backupManager.crearBackupAutomatico(), 100);
+        }
         
     } catch (error) {
-        console.error('❌ Error al guardar:', error);
+        console.error('❌ Error al guardar en localStorage:', error);
         
-        // 3. SI HAY ERROR DE ESPACIO, proteger inventario
+        // Si hay error de espacio, activar protección
         if (error.name === 'QuotaExceededError') {
-            console.error('💥 ESPACIO LLENO! Protegiendo inventario...');
-            return protectInventoryOnFullStorage();
+            console.error('💥 ESPACIO LLENO! Activando protección...');
+            protectInventoryOnFullStorage();
         }
-        
-        return false;
     }
+    
+    // 2. SEGUNDO: Intentar guardar en Supabase (si está disponible)
+    if (window.usarSupabase && window.supabaseClient) {
+        guardadoSupabase = await sincronizarConSupabase();
+    }
+    
+    return guardadoLocal; // Devolver éxito del localStorage
 }
 
-
-// Función ESPECÍFICA para proteger el inventario cuando el almacenamiento está lleno
-// AGREGAR después de saveData()
-function protectInventoryOnFullStorage() {
-    console.log('🛡️ Activando protección de inventario...');
-    
+// Función para sincronizar con Supabase
+async function sincronizarConSupabase() {
     try {
-        // PASO 1: Eliminar SOLO backups antiguos
-        console.log('🗑️ Eliminando backups antiguos...');
-        eliminarTodosLosBackupsExcepto(1);
+        console.log('🔄 Sincronizando con Supabase...');
         
-        // Intentar guardar de nuevo
-        localStorage.setItem('inventory', JSON.stringify(inventory));
-        localStorage.setItem('sales', JSON.stringify(sales));
-        localStorage.setItem('settings', JSON.stringify(settings));
+        let productosSincronizados = 0;
+        let ventasSincronizadas = 0;
         
-        console.log('✅ Guardado exitoso después de limpiar backups');
+        // 1. SINCRONIZAR PRODUCTOS
+        if (inventory.length > 0) {
+            // Preparar TODOS los productos de una vez (más eficiente)
+            const productosParaSupabase = inventory.map(producto => ({
+                id: producto.id.toString(),
+                codigo: producto.barcode || '',
+                name: producto.name,
+                size: producto.size || '',
+                price: parseFloat(producto.price) || 0,
+                stocktype: producto.stockType || 'units',
+                unitspercontainer: parseInt(producto.unitsPerContainer) || 1,
+                totalunits: parseInt(producto.totalUnits) || 0,
+                initialstock: parseInt(producto.initialStock) || 0,
+                barcode: producto.barcode || '',
+                image: producto.image || '/logodepestaña/Captura de pantalla 2025-11-19 143222.ico'
+            }));
+            
+            console.log(`📤 Enviando ${productosParaSupabase.length} productos...`);
+            
+            const { error: errorProductos } = await window.supabaseClient
+                .from('productos')
+                .upsert(productosParaSupabase, { onConflict: 'id' });
+            
+            if (errorProductos) {
+                console.error('❌ Error sincronizando productos:', errorProductos);
+                
+                // Intentar uno por uno si falla el batch
+                console.log('🔄 Intentando uno por uno...');
+                for (const productoData of productosParaSupabase) {
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('productos')
+                            .upsert([productoData], { onConflict: 'id' });
+                        
+                        if (!error) productosSincronizados++;
+                    } catch (e) {
+                        console.error(`❌ Error con producto ${productoData.id}:`, e);
+                    }
+                }
+            } else {
+                productosSincronizados = inventory.length;
+                console.log(`✅ ${productosSincronizados} productos sincronizados`);
+            }
+        }
+        
+        // 2. SINCRONIZAR VENTAS
+        if (sales.length > 0) {
+            // Tomar solo ventas recientes (últimas 50)
+            const ventasRecientes = sales.slice(-50);
+            const ventasParaSupabase = ventasRecientes.map(venta => ({
+                id: venta.id,
+                date: venta.date,
+                paymentmethod: venta.paymentMethod || 'Efectivo',
+                total: parseFloat(venta.total) || 0,
+                items: venta.items // JSONB como lo definiste
+            }));
+            
+            console.log(`📤 Enviando ${ventasParaSupabase.length} ventas...`);
+            
+            const { error: errorVentas } = await window.supabaseClient
+                .from('ventas')
+                .upsert(ventasParaSupabase, { onConflict: 'id' });
+            
+            if (errorVentas) {
+                console.error('❌ Error sincronizando ventas:', errorVentas);
+                
+                // Intentar una por una
+                for (const ventaData of ventasParaSupabase) {
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('ventas')
+                            .insert([ventaData])
+                            .select(); // Agregar select() para mejor debugging
+                        
+                        if (!error) ventasSincronizadas++;
+                    } catch (e) {
+                        console.error(`❌ Error con venta ${ventaData.id}:`, e);
+                    }
+                }
+            } else {
+                ventasSincronizadas = ventasRecientes.length;
+                console.log(`✅ ${ventasSincronizadas} ventas sincronizadas`);
+            }
+        }
+        
+        console.log(`🎉 Sincronización completada: ${productosSincronizados} productos, ${ventasSincronizadas} ventas`);
         return true;
         
     } catch (error) {
-        console.error('❌ Aún sin espacio después de limpiar backups');
-        
-        try {
-            // PASO 2: Eliminar VENTAS para salvar INVENTARIO
-            console.log('🔥 EMERGENCIA: Eliminando ventas para salvar inventario...');
-            
-            // 1. Guardar SOLO el inventario
-            localStorage.setItem('inventory', JSON.stringify(inventory));
-            
-            // 2. Eliminar TODO lo demás
-            eliminarTodoExceptoInventario();
-            
-            // 3. Guardar configuración mínima
-            const configMinima = {
-                pin: settings.pin,
-                currency: settings.currency,
-                storeName: settings.storeName,
-                stockWarning: settings.stockWarning
-            };
-            localStorage.setItem('settings', JSON.stringify(configMinima));
-            
-            // 4. Vaciar array de ventas en memoria
-            sales = [];
-            
-            console.log('✅ INVENTARIO SALVADO (ventas sacrificadas)');
-            mostrarAlertaEmergencia();
-            return true;
-            
-        } catch (error2) {
-            console.error('💀 ERROR CRÍTICO: No se pudo salvar ni el inventario');
-            sessionStorage.setItem('inventory_emergency', JSON.stringify(inventory));
-            
-            alert('🚨 EMERGENCIA: El almacenamiento está completamente lleno.\n\n' +
-                  'El inventario se guardó temporalmente en memoria.\n' +
-                  'EXPORTA UN BACKUP AHORA MISMO antes de cerrar la pestaña.');
-            return false;
-        }
+        console.error('❌ Error en sincronización:', error);
+        return false;
     }
 }
 
@@ -954,7 +1108,7 @@ function registerSale(paymentMethod) {
     const sale = {
         id: saleId,
         date: now.toLocaleString('es-ES'),
-        paymentMethod: paymentMethod,
+        paymentMethod: paymentMethod,  //AQUI SI HAY 
         items: [...cart],
         total: total,
         convertedTotal: settings.convertTo ? total * settings.conversionRate : null
@@ -973,6 +1127,49 @@ function registerSale(paymentMethod) {
     saveData();
     removeZeroStockProducts();
     checkLowStock();
+    
+    // ✅ NUEVO: Sincronizar venta con Supabase
+    // En registerSale(), después de sales.push(sale);
+    if (window.usarSupabase && window.supabaseClient) {
+        setTimeout(async () => {
+            try {
+                const ventaData = {
+                    id: saleId,
+                    date: now.toISOString(), // Usar formato ISO
+                    paymentmethod: paymentMethod,
+                    total: total,
+                    items: cart
+                };
+                
+                console.log('💰 Registrando venta en Supabase:', ventaData);
+                
+                const { data, error } = await window.supabaseClient
+                    .from('ventas')
+                    .insert([ventaData]);
+                
+                if (error) {
+                    console.error('❌ Error registrando venta:', error);
+                } else {
+                    console.log('✅ Venta registrada en Supabase');
+                    
+                    // Actualizar stock de cada producto en Supabase
+                    for (const cartItem of cart) {
+                        const product = inventory.find(p => p.id === cartItem.id);
+                        if (product) {
+                            await window.supabaseClient
+                                .from('productos')
+                                .update({ 
+                                    totalunits: product.totalUnits 
+                                })
+                                .eq('id', product.id);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('⚠️ Error en registro Supabase:', error);
+            }
+        }, 100);
+    }
     
     // Mostrar resumen
     showSaleReceipt(sale);
@@ -1459,7 +1656,58 @@ document.getElementById('addProductForm').addEventListener('submit', async funct
     renderInventory();
     removeZeroStockProducts();
     closeAddProductModal();
-});
+    
+    // ✅ CORREGIDO: Sincronización inmediata con Supabase
+    if (window.usarSupabase && window.supabaseClient) {
+        setTimeout(async () => {
+            try {
+                // DETERMINAR EL ID CORRECTO:
+                let productId;
+                let productToSync;
+                
+                if (editingProductId) {
+                    // Caso 1: Estamos EDITANDO
+                    productId = editingProductId;
+                    productToSync = inventory.find(p => p.id === editingProductId);
+                } else {
+                    // Caso 2: Estamos CREANDO
+                    productToSync = inventory[inventory.length - 1];
+                    productId = productToSync.id;
+                }
+                
+                if (!productToSync) return;
+                
+                const productoData = {
+                    id: productId,
+                    codigo: productToSync.barcode || '',
+                    name: productToSync.name,
+                    size: productToSync.size || '',
+                    price: parseFloat(productToSync.price) || 0,
+                    stocktype: productToSync.stockType || 'units',
+                    unitspercontainer: parseInt(productToSync.unitsPerContainer) || 1,
+                    totalunits: parseInt(productToSync.totalUnits) || 0,
+                    initialstock: parseInt(productToSync.initialStock) || 0,
+                    barcode: productToSync.barcode || '',
+                    image: productToSync.image || '/logodepestaña/Captura de pantalla 2025-11-19 143222.ico'
+                };
+                
+                console.log('📤 Sincronizando producto:', productoData.name);
+                
+                const { error } = await window.supabaseClient
+                    .from('productos')
+                    .upsert([productoData], { onConflict: 'id' });
+                
+                if (error) {
+                    console.error('❌ Error:', error);
+                } else {
+                    console.log('✅ Producto sincronizado');
+                }
+            } catch (error) {
+                console.error('⚠️ Error:', error);
+            }
+        }, 100);
+    }
+}); // ← fin del evento submit
 
 // Eliminar inventario
 function deleteInventory() {
@@ -2117,3 +2365,112 @@ function mostrarAyudaBackup() {
     alert(`🔒 GUÍA DE BACKUP - INVENTARIO LOCAL\n\n📌 IMPORTANTE:\n• Los datos SOLO se guardan en ESTA computadora\n• No se sincronizan con otras dispositivos\n• Sin internet requerido\n\n💾 Exportar (RECOMENDADO):\n1. Haz clic en "Exportar Backup"\n2. Se descargará un archivo .json\n3. Guárdalo en USB, correo o nube\n4. Haz esto SEMANALMENTE\n\n📤 Importar:\n• Restaura desde un archivo .json\n• REEMPLAZA los datos actuales\n\n⚠️ CONSEJOS DE SEGURIDAD:\n1. Exporta backup CADA SEMANA\n2. Guarda en al menos 2 lugares diferentes\n3. Mantén tu PIN seguro`);
 }
 // ==================== FIN FUNCIONES BACKUP UI ====================
+
+// Sincronizar manualmente
+async function sincronizarManual() {
+    if (!window.usarSupabase || !window.supabaseClient) {
+        alert('Supabase no disponible');
+        return;
+    }
+    
+    const resultado = await sincronizarConSupabase();
+    
+    if (resultado) {
+        alert('✅ Sincronización completada\n\nLos datos locales y en la nube ahora están actualizados.');
+    } else {
+        alert('❌ Hubo errores en la sincronización\n\nRevisa la consola para más detalles.');
+    }
+}
+
+// Verificar estado de conexión
+function verificarConexionSupabase() {
+    if (!window.supabaseClient) {
+        return { estado: 'no_configurado', mensaje: 'Supabase no configurado' };
+    }
+    
+    if (!window.usarSupabase) {
+        return { estado: 'sin_conexion', mensaje: 'Sin conexión a Supabase' };
+    }
+    
+    return { 
+        estado: 'conectado', 
+        mensaje: `✅ Conectado a Supabase\nURL: ${window.supabaseClient_CONFIG.url}` 
+    };
+}
+
+// ==================== REGISTRAR FUNCIONES GLOBALES ====================
+
+// Esta función se ejecutará cuando el script cargue
+(function registrarTodasLasFunciones() {
+    console.log('📝 Registrando funciones globales...');
+    
+    // Lista de TODAS las funciones que necesitan ser globales
+    const funcionesGlobales = {
+        // Sistema básico
+        login: login,
+        logout: logout,
+        showSection: showSection,
+        loadData: loadData,
+        saveData: saveData,
+        
+        // Carrito y ventas
+        addToCart: addToCart,
+        addProductToCart: addProductToCart,
+        removeFromCart: removeFromCart,
+        addToCartFromCart: addToCartFromCart,
+        registerSale: registerSale,
+        printReceipt: printReceipt,
+        continueSale: continueSale,
+        cancelSale: cancelSale,
+        
+        // Inventario
+        showAddProductModal: showAddProductModal,
+        closeAddProductModal: closeAddProductModal,
+        openEditProductModal: openEditProductModal,
+        deleteCurrentProduct: deleteCurrentProduct,
+        updateStockInputs: updateStockInputs,
+        deleteInventory: deleteInventory,
+        editInventory: editInventory,
+        printInventory: printInventory,
+        checkLowStock: checkLowStock,
+        removeZeroStockProducts: removeZeroStockProducts,
+        printProductSingle: printProductSingle,
+        
+        // Configuración
+        loadSettings: loadSettings,
+        saveSettings: saveSettings,
+        viewSalesRecord: viewSalesRecord,
+        closeSalesRecordModal: closeSalesRecordModal,
+        exportSalesRecord: exportSalesRecord,
+        deleteSalesRecord: deleteSalesRecord,
+        
+        // Cloudinary
+        uploadImageToCloudinary: uploadImageToCloudinary,
+        
+        // Backup
+        mostrarPanelBackup: mostrarPanelBackup,
+        cerrarPanelBackup: cerrarPanelBackup,
+        exportarBackupManual: exportarBackupManual,
+        mostrarImportarBackup: mostrarImportarBackup,
+        importarBackupManual: importarBackupManual,
+        crearBackupManual: crearBackupManual,
+        mostrarAyudaBackup: mostrarAyudaBackup,
+        exportarBackupEmergencia: exportarBackupEmergencia,
+        
+        // Utilidades
+        formatCurrency: formatCurrency
+    };
+    
+    // Registrar usando la función del HTML
+    if (window.registrarFuncionesGlobales) {
+        window.registrarFuncionesGlobales(funcionesGlobales);
+    } else {
+        // Fallback: registrar manualmente
+        for (const [nombre, funcion] of Object.entries(funcionesGlobales)) {
+            window[nombre] = funcion;
+        }
+        console.log(`✅ ${Object.keys(funcionesGlobales).length} funciones registradas`);
+    }
+    
+    console.log('🚀 Sistema universal listo para usar');
+})();
