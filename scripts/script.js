@@ -331,6 +331,128 @@ async function loadData() {
 }
 
 // Función para cargar desde Supabase
+//nueva
+// Función para cargar desde Supabase - VERSIÓN MEJORADA
+async function cargarDesdeSupabase() {
+    try {
+        console.log('🌐 Conectando a Supabase...');
+        
+        // Verificar que el cliente existe
+        if (!window.supabaseClient) {
+            console.error('❌ ERROR: window.supabaseClient no existe');
+            return false;
+        }
+        
+        console.log('✅ Cliente Supabase encontrado');
+        
+        // 1. CARGAR PRODUCTOS desde Supabase
+        console.log('📥 Solicitando productos...');
+        const { data: productos, error: errorProductos, count } = await window.supabaseClient
+            .from('productos')
+            .select('*', { count: 'exact' })
+            .order('name', { ascending: true });
+        
+        if (errorProductos) {
+            console.error('❌ ERROR CARGANDO PRODUCTOS:');
+            console.error('   • Mensaje:', errorProductos.message);
+            console.error('   • Detalles:', errorProductos.details);
+            console.error('   • Código:', errorProductos.code);
+            return false;
+        }
+        
+        console.log(`📊 Supabase respondió: ${productos ? productos.length : 'null'} productos`);
+        console.log(`📊 Conteo exacto: ${count} productos`);
+        
+        // VERIFICACIÓN CRÍTICA: productos podría ser null
+        if (!productos) {
+            console.error('❌ ERROR: productos es null o undefined');
+            return false;
+        }
+        
+        if (productos.length === 0) {
+            console.log('📭 Supabase está vacío (0 productos)');
+            return false;
+        }
+        
+        // DEBUG: Mostrar primer producto para ver estructura
+        console.log('🔍 Estructura del primer producto:', productos[0]);
+        console.log('🔍 Campos disponibles:', Object.keys(productos[0]));
+        
+        // Convertir formato Supabase → Formato de tu app
+        console.log('🗺️ Mapeando productos...');
+        try {
+            inventory = productos.map(p => ({
+                id: p.id,
+                name: p.name || 'Sin nombre',
+                size: p.size || '',
+                price: parseFloat(p.price) || 0,
+                stockType: p.stocktype || 'units',
+                unitsPerContainer: p.unitspercontainer || 1,
+                totalUnits: p.totalunits || 0,
+                initialStock: p.initialstock || 0,
+                barcode: p.barcode || '',
+                image: p.image || '/logodepestaña/Captura de pantalla 2025-11-19 143222.ico'
+            }));
+            
+            console.log(`✅ ${inventory.length} productos mapeados correctamente`);
+            
+            // Verificar que se mapearon correctamente
+            if (inventory.length === 0) {
+                console.error('❌ ERROR: Mapeo resultó en 0 productos');
+                return false;
+            }
+            
+            // Guardar en localStorage como backup
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            console.log('💾 Inventario guardado en localStorage');
+            
+        } catch (mapeoError) {
+            console.error('❌ ERROR EN MAPEO:', mapeoError);
+            console.error('Producto problemático:', mapeoError.producto || 'desconocido');
+            return false;
+        }
+        
+        // 2. CARGAR VENTAS desde Supabase (opcional)
+        console.log('💰 Cargando ventas...');
+        try {
+            const { data: ventas, error: errorVentas } = await window.supabaseClient
+                .from('ventas')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(500);
+            
+            if (errorVentas) {
+                console.log('⚠️ No se pudieron cargar ventas:', errorVentas.message);
+            } else if (ventas && ventas.length > 0) {
+                sales = ventas.map(v => ({
+                    id: v.id,
+                    date: v.date || v.created_at,
+                    paymentMethod: v.paymentmethod || 'Efectivo',
+                    items: v.items,
+                    total: parseFloat(v.total) || 0
+                }));
+                
+                console.log(`✅ ${sales.length} ventas cargadas desde Supabase`);
+                localStorage.setItem('sales', JSON.stringify(sales));
+            } else {
+                console.log('📭 No hay ventas en Supabase');
+            }
+        } catch (errorVentas) {
+            console.log('⚠️ Error cargando ventas (no crítico):', errorVentas.message);
+        }
+        
+        console.log('🎉 CARGA DESDE SUPABASE COMPLETADA EXITOSAMENTE');
+        return true;
+        
+    } catch (error) {
+        console.error('💥 ERROR GRAVE en cargarDesdeSupabase:');
+        console.error('   • Mensaje:', error.message);
+        console.error('   • Stack:', error.stack);
+        console.error('   • Tipo:', error.name);
+        return false;
+    }
+}
+/* original
 async function cargarDesdeSupabase() {
     try {
         console.log('🌐 Conectando a Supabase...');
@@ -401,7 +523,7 @@ async function cargarDesdeSupabase() {
         console.error('💥 Error grave cargando desde Supabase:', error);
         return false; // Falló
     }
-}
+}*/
 
 // Función para cargar desde localStorage (tu código original adaptado)
 function cargarDesdeLocalStorage() {
